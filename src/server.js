@@ -12,6 +12,7 @@ import { closeSharedContext } from './browser/browser-singleton.js';
 const server = new McpServer({
   name: 'bdp-merito',
   version: '1.0.0',
+  description: 'Consulta la Banca Dati di Merito del Ministero della Giustizia (bdp.giustizia.it)',
 });
 
 registerSearchTools(server);
