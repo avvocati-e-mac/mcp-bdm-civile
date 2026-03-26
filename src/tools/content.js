@@ -27,17 +27,9 @@ export function registerContentTools(server) {
       annotations: { readOnlyHint: true, idempotentHint: true },
     },
     async (args) => {
-      const parsed = UrlSchema.safeParse(args);
-      if (!parsed.success) {
-        return {
-          isError: true,
-          content: [{ type: 'text', text: `Input non valido: ${parsed.error.message}` }],
-        };
-      }
-
       const page = await getPage();
       try {
-        await page.goto(parsed.data.url, { waitUntil: 'networkidle' });
+        await page.goto(args.url, { waitUntil: 'networkidle' });
         assertNotRedirectedToLogin(page);
 
         // Espandi l'accordion Abstract per avere accesso al contenuto inline
@@ -168,17 +160,9 @@ export function registerContentTools(server) {
       annotations: { readOnlyHint: true, idempotentHint: true },
     },
     async (args) => {
-      const parsed = UrlSchema.safeParse(args);
-      if (!parsed.success) {
-        return {
-          isError: true,
-          content: [{ type: 'text', text: `Input non valido: ${parsed.error.message}` }],
-        };
-      }
-
       const page = await getPage();
       try {
-        await page.goto(parsed.data.url, { waitUntil: 'networkidle' });
+        await page.goto(args.url, { waitUntil: 'networkidle' });
         assertNotRedirectedToLogin(page);
         // Attendi caricamento contenuto abstract (SPA)
         await page.waitForSelector('.title-text-lg, .text-justify', { timeout: 10000 });
@@ -274,17 +258,9 @@ export function registerContentTools(server) {
       annotations: { readOnlyHint: true, idempotentHint: true },
     },
     async (args) => {
-      const parsed = UrlSchema.safeParse(args);
-      if (!parsed.success) {
-        return {
-          isError: true,
-          content: [{ type: 'text', text: `Input non valido: ${parsed.error.message}` }],
-        };
-      }
-
       const page = await getPage();
       try {
-        await page.goto(parsed.data.url, { waitUntil: 'networkidle' });
+        await page.goto(args.url, { waitUntil: 'networkidle' });
         assertNotRedirectedToLogin(page);
         await rateLimit(page);
 

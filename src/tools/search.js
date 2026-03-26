@@ -380,15 +380,8 @@ export function registerSearchTools(server) {
       annotations: { readOnlyHint: true, idempotentHint: false },
     },
     async (args) => {
-      const parsed = CercaProvvedimentiSchema.safeParse(args);
-      if (!parsed.success) {
-        return {
-          isError: true,
-          content: [{ type: 'text', text: `Input non valido: ${parsed.error.message}` }],
-        };
-      }
       try {
-        const results = await eseguiRicerca('provvedimento', parsed.data, estraiCardProvvedimento);
+        const results = await eseguiRicerca('provvedimento', args, estraiCardProvvedimento);
         return { content: [{ type: 'text', text: JSON.stringify(results) }] };
       } catch (err) {
         return {
@@ -408,15 +401,8 @@ export function registerSearchTools(server) {
       annotations: { readOnlyHint: true, idempotentHint: false },
     },
     async (args) => {
-      const parsed = CercaAbstractSchema.safeParse(args);
-      if (!parsed.success) {
-        return {
-          isError: true,
-          content: [{ type: 'text', text: `Input non valido: ${parsed.error.message}` }],
-        };
-      }
       try {
-        const results = await eseguiRicerca('abstract', parsed.data, estraiCardAbstract);
+        const results = await eseguiRicerca('abstract', args, estraiCardAbstract);
         return { content: [{ type: 'text', text: JSON.stringify(results) }] };
       } catch (err) {
         return {

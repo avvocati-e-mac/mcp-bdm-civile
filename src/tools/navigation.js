@@ -47,15 +47,7 @@ export function registerNavigationTools(server) {
       annotations: { readOnlyHint: true, idempotentHint: false },
     },
     async (args) => {
-      const parsed = NavigaArchivioSchema.safeParse(args);
-      if (!parsed.success) {
-        return {
-          isError: true,
-          content: [{ type: 'text', text: `Input non valido: ${parsed.error.message}` }],
-        };
-      }
-
-      const p = parsed.data;
+      const p = args;
       const page = await getPage();
       try {
         const archiveUrl = buildArchiveUrl(p);
@@ -147,17 +139,9 @@ export function registerNavigationTools(server) {
       annotations: { readOnlyHint: true, idempotentHint: true },
     },
     async (args) => {
-      const parsed = UrlSchema.safeParse(args);
-      if (!parsed.success) {
-        return {
-          isError: true,
-          content: [{ type: 'text', text: `Input non valido: ${parsed.error.message}` }],
-        };
-      }
-
       const page = await getPage();
       try {
-        await page.goto(parsed.data.url, { waitUntil: 'networkidle' });
+        await page.goto(args.url, { waitUntil: 'networkidle' });
         assertNotRedirectedToLogin(page);
 
         // Apri il modal timeline cliccando il bottone dedicato
@@ -206,15 +190,7 @@ export function registerNavigationTools(server) {
       annotations: { readOnlyHint: true, idempotentHint: true },
     },
     async (args) => {
-      const parsed = OttieniPrecedentiSchema.safeParse(args);
-      if (!parsed.success) {
-        return {
-          isError: true,
-          content: [{ type: 'text', text: `Input non valido: ${parsed.error.message}` }],
-        };
-      }
-
-      const { url, tipo } = parsed.data;
+      const { url, tipo } = args;
       const page = await getPage();
       try {
         await page.goto(url, { waitUntil: 'networkidle' });
