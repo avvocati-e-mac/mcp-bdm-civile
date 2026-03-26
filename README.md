@@ -175,6 +175,79 @@ Verifica che il percorso nel file di configurazione sia corretto e che il file s
 
 ---
 
+## Strumenti di workflow
+
+### `analisi_quesito_giuridico`
+
+Pipeline a due fasi progettata per rispondere a quesiti giuridici complessi analizzando sistematicamente la BDP.
+
+**Come funziona:**
+
+**Fase 1 — Scansione ampia**
+- Estrae automaticamente termini di ricerca ottimizzati dal quesito (sinonimi giuridici IT, riferimenti normativi, materia)
+- Esegue più query in parallelo sulla SERP BDP, scorrendo fino a `max_pagine_serp` pagine per query
+- Analizza gli estratti testuali di ogni risultato (senza aprire i documenti) calcolando uno score di pertinenza basato su copertura termini, densità, coerenza contestuale e lunghezza
+- Pre-seleziona i candidati più promettenti (`da_aprire`) in base alla soglia `soglia_apri`
+
+**Fase 2 — Approfondimento selettivo**
+- Apre e legge i dettagli completi SOLO per i candidati selezionati (max `max_da_aprire` documenti)
+- Calcola uno score finale multifattore (parole chiave, materia, abstract collegati, riferimenti normativi)
+- Restituisce i migliori `max_provvedimenti` ordinati per pertinenza
+
+**Parametri:**
+
+| Parametro | Default | Descrizione |
+|-----------|---------|-------------|
+| `quesito` | — | Quesito giuridico in linguaggio naturale (min 10 caratteri) |
+| `max_provvedimenti` | 10 | Numero massimo di risultati restituiti |
+| `max_pagine_serp` | 5 | Pagine SERP da scansionare per ogni query |
+| `max_per_query` | 15 | Risultati massimi per query per pagina |
+| `include_abstract` | true | Se cercare anche nelle abstract/massime |
+| `soglia_score` | 0.1 | Score minimo per includere un provvedimento nel risultato finale |
+| `soglia_apri` | 0.35 | Score estratti minimo per aprire un documento in Fase 2 |
+| `max_da_aprire` | 15 | Numero massimo di documenti da aprire in Fase 2 |
+
+**Output:**
+```json
+{
+  "quesito": "...",
+  "termini_utilizzati": { "termini_primari": [], "materia_suggerita": "...", ... },
+  "fase1": { "pagine_analizzate": 5, "provvedimenti_analizzati": 75, ... },
+  "fase2": { "documenti_aperti": 12, "documenti_scartati_dopo_lettura": 1 },
+  "provvedimenti": [ { "estremi": "...", "_score": 0.72, "_score_dettaglio": { ... } } ],
+  "n_trovati_totale": 75,
+  "n_restituiti": 10,
+  "errori": []
+}
+```
+
+**Esempio d'uso:**
+> *"Analizza il quesito: quali sono i criteri per la responsabilità medica da omessa diagnosi?"*
+
+---
+
+## Roadmap
+
+### In Progress
+- Pipeline `analisi_quesito_giuridico` — branch `feature/analisi-quesito-giuridico`
+
+### Completato
+- Tool atomici: `cerca_provvedimenti`, `cerca_abstract`
+- Tool di lettura: `leggi_dettaglio_provvedimento`, `leggi_abstract`, `leggi_testo_provvedimento`
+- Tool di navigazione e utilità
+- Gestione sessione CIE e browser singleton Playwright
+
+### Backlog
+- `confronta_provvedimenti`
+- `estrai_massima`
+- `mappa_orientamenti`
+- `ricerca_per_articolo`
+- Cache locale provvedimenti
+- Autenticazione CIE completa
+- Rate limiting adattivo
+
+---
+
 ## Struttura del progetto
 
 ```
