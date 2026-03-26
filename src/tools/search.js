@@ -168,7 +168,7 @@ async function compilaForm(page, p, target) {
  * @param {string} baseUrl
  * @returns {Promise<object[]>}
  */
-async function estraiCardProvvedimento(page, baseUrl) {
+export async function estraiCardProvvedimento(page, baseUrl) {
   return page.evaluate((base) => {
     // Struttura verificata live:
     // .card.card-bg > .card-body.text-secondary
@@ -320,7 +320,7 @@ async function estraiCardAbstract(page, baseUrl) {
  * @param {object} p - parametri validati
  * @param {Function} estraiCard - funzione di estrazione card specifica
  */
-async function eseguiRicerca(target, p, estraiCard) {
+export async function eseguiRicerca(target, p, estraiCard) {
   const page = await getPage();
   try {
     const url = `${BASE_URL}/search/standard?target=${target}&sort_field=${p.sort_field}&sort_order=${p.sort_order}`;
