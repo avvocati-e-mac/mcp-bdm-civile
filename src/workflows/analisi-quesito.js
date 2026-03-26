@@ -56,6 +56,37 @@ async function cercaPagina(query, pagina, opzioniRicerca = {}) {
 }
 
 /**
+ * Esegue task asincroni con concorrenza limitata (pool di N worker).
+ * Semantica analoga a Promise.allSettled: non propaga eccezioni.
+ *
+ * @param {Array<() => Promise<any>>} tasks - array di thunk
+ * @param {number} limit - max task concorrenti
+ * @param {number} [delayMs=0] - pausa tra task dello stesso worker
+ * @returns {Promise<Array<{status:'fulfilled',value:any}|{status:'rejected',reason:any}>>}
+ */
+async function runWithConcurrency(tasks, limit, delayMs = 0) {
+  const results = new Array(tasks.length);
+  let nextIndex = 0;
+
+  async function worker() {
+    while (nextIndex < tasks.length) {
+      const index = nextIndex++;
+      try {
+        results[index] = { status: 'fulfilled', value: await tasks[index]() };
+      } catch (err) {
+        results[index] = { status: 'rejected', reason: err };
+      }
+      if (delayMs > 0 && nextIndex < tasks.length) {
+        await new Promise(r => setTimeout(r, delayMs));
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, worker));
+  return results;
+}
+
+/**
  * Dedup provvedimenti per link_dettaglio o estremi.
  * @param {object[]} provvedimenti
  * @returns {object[]}
@@ -145,19 +176,25 @@ async function leggiDettaglio(url) {
  *   include_abstract?: boolean,
  *   soglia_score?: number,
  *   soglia_apri?: number,
- *   max_da_aprire?: number
+ *   max_da_aprire?: number,
+ *   termini_override?: object|null,
+ *   max_query_concorrenti?: number,
+ *   delay_tra_query_ms?: number
  * }} opzioni
  * @returns {Promise<object>}
  */
 export async function analizzaQuesito(quesito, opzioni = {}) {
   const {
     max_provvedimenti = 10,
-    max_pagine_serp = 5,
-    max_per_query = 15,
+    max_pagine_serp = 3,
+    max_per_query = 10,
     include_abstract = true,
     soglia_score = 0.1,
     soglia_apri = 0.35,
-    max_da_aprire = 15,
+    max_da_aprire = 10,
+    termini_override = null,
+    max_query_concorrenti = 2,
+    delay_tra_query_ms = 3000,
   } = opzioni;
 
   const errori = [];
@@ -166,8 +203,16 @@ export async function analizzaQuesito(quesito, opzioni = {}) {
   // FASE 1 — Scansione ampia
   // ════════════════════════════════════════════════════════════════════════════
 
-  // 1. Estrai termini di ricerca
-  const termini = estraiTerminiRicerca(quesito);
+  // 1. Estrai termini di ricerca: usa override LLM se fornito, altrimenti keyword-extractor deterministico
+  const termini = termini_override != null
+    ? {
+        termini_primari: termini_override.termini_primari ?? [],
+        termini_abstract: termini_override.termini_abstract ?? [],
+        materia_suggerita: termini_override.materia_suggerita ?? null,
+        tipo_suggerito: termini_override.tipo_suggerito ?? 'TUTTI',
+        riferimenti_normativi: termini_override.riferimenti_normativi ?? [],
+      }
+    : estraiTerminiRicerca(quesito);
 
   // 2. Costruisci lista query: primarie + (se include_abstract) abstract
   const queriesPrimarie = termini.termini_primari.slice(0, 5); // max 5 query primarie
@@ -180,28 +225,28 @@ export async function analizzaQuesito(quesito, opzioni = {}) {
   let totalePagineAnalizzate = 0;
 
   // Per ogni query, itera le pagine 1…max_pagine_serp in SEQUENZA
-  // Le query sono eseguite in parallelo con Promise.allSettled
-  const risultatiQueries = await Promise.allSettled(
-    tutteLeQuery.map(async (query) => {
-      if (!query || query.trim().length === 0) return [];
-      const provvQuery = [];
+  // Le query sono eseguite con concorrenza limitata (max_query_concorrenti) per evitare rate-limit BDP
+  const taskQuery = tutteLeQuery.map((query) => async () => {
+    if (!query || query.trim().length === 0) return [];
+    const provvQuery = [];
 
-      for (let pagina = 1; pagina <= max_pagine_serp; pagina++) {
-        try {
-          const risultatiPagina = await cercaPagina(query, pagina, { max_per_query });
-          provvQuery.push(...risultatiPagina);
+    for (let pagina = 1; pagina <= max_pagine_serp; pagina++) {
+      try {
+        const risultatiPagina = await cercaPagina(query, pagina, { max_per_query });
+        provvQuery.push(...risultatiPagina);
 
-          // Se la pagina ha restituito meno risultati del massimo, non c'è altra pagina
-          if (risultatiPagina.length < max_per_query) break;
-        } catch (err) {
-          errori.push({ query, pagina, errore: err.message });
-          break;
-        }
+        // Se la pagina ha restituito meno risultati del massimo, non c'è altra pagina
+        if (risultatiPagina.length < max_per_query) break;
+      } catch (err) {
+        errori.push({ query, pagina, errore: err.message });
+        break;
       }
+    }
 
-      return provvQuery;
-    })
-  );
+    return provvQuery;
+  });
+
+  const risultatiQueries = await runWithConcurrency(taskQuery, max_query_concorrenti, delay_tra_query_ms);
 
   for (const risultato of risultatiQueries) {
     if (risultato.status === 'fulfilled') {
@@ -307,7 +352,10 @@ export async function analizzaQuesito(quesito, opzioni = {}) {
 
   return {
     quesito,
-    termini_utilizzati: termini,
+    termini_utilizzati: {
+      ...termini,
+      _sorgente: termini_override != null ? 'llm_override' : 'keyword_extractor',
+    },
     fase1,
     fase2,
     provvedimenti,

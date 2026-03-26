@@ -89,7 +89,7 @@ describe('analizzaQuesito', () => {
   it('struttura output contiene tutti i campi obbligatori', async () => {
     const result = await analizzaQuesito(
       'Responsabilità medica per errore sanitario al paziente',
-      { max_pagine_serp: 1, max_da_aprire: 3, max_provvedimenti: 3 }
+      { max_pagine_serp: 1, max_da_aprire: 3, max_provvedimenti: 3, delay_tra_query_ms: 0 }
     );
 
     expect(result).toHaveProperty('quesito');
@@ -120,7 +120,7 @@ describe('analizzaQuesito', () => {
 
     const result = await analizzaQuesito(
       'Responsabilità medica errore sanitario',
-      { max_pagine_serp: 1 }
+      { max_pagine_serp: 1, delay_tra_query_ms: 0 }
     );
 
     // n_trovati_totale dopo dedup: deve essere 1
@@ -137,7 +137,7 @@ describe('analizzaQuesito', () => {
 
     const result = await analizzaQuesito(
       'Responsabilità medica sanitaria errore paziente danno',
-      { max_pagine_serp: 1 }
+      { max_pagine_serp: 1, delay_tra_query_ms: 0 }
     );
 
     // Deve aver gestito l'errore senza crash
@@ -161,7 +161,7 @@ describe('analizzaQuesito', () => {
 
     const result = await analizzaQuesito(
       'Responsabilità medica errore sanitario danno paziente',
-      { max_pagine_serp: 1, soglia_apri: 0.20, max_da_aprire: 5 }
+      { max_pagine_serp: 1, soglia_apri: 0.20, max_da_aprire: 5, delay_tra_query_ms: 0 }
     );
 
     // getPage deve essere stato chiamato solo per i candidati selezionati (che hanno link_dettaglio)
@@ -181,7 +181,7 @@ describe('analizzaQuesito', () => {
 
     await analizzaQuesito(
       'Responsabilità medica errore sanitario danno paziente ospedale',
-      { max_pagine_serp: 1, soglia_apri: 0.01, max_da_aprire: 3 }
+      { max_pagine_serp: 1, soglia_apri: 0.01, max_da_aprire: 3, delay_tra_query_ms: 0 }
     );
 
     expect(getPage.mock.calls.length).toBeLessThanOrEqual(3);
@@ -196,7 +196,7 @@ describe('analizzaQuesito', () => {
 
     const result = await analizzaQuesito(
       'Responsabilità medica errore sanitario',
-      { max_pagine_serp: 1, soglia_apri: 0.99 } // soglia altissima → nessun APRI
+      { max_pagine_serp: 1, soglia_apri: 0.99, delay_tra_query_ms: 0 }
     );
 
     // Non deve crashare e deve restituire struttura valida
@@ -206,10 +206,93 @@ describe('analizzaQuesito', () => {
   it('n_restituiti <= max_provvedimenti', async () => {
     const result = await analizzaQuesito(
       'Responsabilità medica errore sanitario danno paziente',
-      { max_provvedimenti: 2, max_pagine_serp: 1 }
+      { max_provvedimenti: 2, max_pagine_serp: 1, delay_tra_query_ms: 0 }
     );
     expect(result.n_restituiti).toBeLessThanOrEqual(2);
     expect(result.provvedimenti.length).toBeLessThanOrEqual(2);
+  });
+
+  it('termini_override usa i termini passati e _sorgente=llm_override', async () => {
+    const terminiPersonalizzati = {
+      termini_primari: ['TFR fallimento lavoratore', 'art. 46 l.fall. beni esclusi massa'],
+      termini_abstract: ['trattamento fine rapporto procedura concorsuale'],
+      materia_suggerita: 'Diritto del lavoro',
+      tipo_suggerito: 'SENTENZA',
+      riferimenti_normativi: ['art. 46 l.fall.', 'art. 2119 c.c.'],
+    };
+
+    const result = await analizzaQuesito(
+      'TFR del lavoratore fallito: va alla massa o al fallito?',
+      { max_pagine_serp: 1, termini_override: terminiPersonalizzati, delay_tra_query_ms: 0 }
+    );
+
+    expect(result.termini_utilizzati.termini_primari).toEqual(terminiPersonalizzati.termini_primari);
+    expect(result.termini_utilizzati.materia_suggerita).toBe('Diritto del lavoro');
+    expect(result.termini_utilizzati._sorgente).toBe('llm_override');
+    expect(risultatoValido(result)).toBe(true);
+  });
+
+  it('senza termini_override _sorgente=keyword_extractor', async () => {
+    const result = await analizzaQuesito(
+      'Responsabilità medica errore sanitario',
+      { max_pagine_serp: 1, delay_tra_query_ms: 0 }
+    );
+    expect(result.termini_utilizzati._sorgente).toBe('keyword_extractor');
+  });
+});
+
+describe('runWithConcurrency', () => {
+  it('non supera il limite di concorrenza', async () => {
+    // Importiamo analizzaQuesito solo come veicolo per testare runWithConcurrency indirettamente.
+    // Test diretto sulla funzione: verifichiamo tramite timing che max 2 task girino in parallelo.
+    let concorrentiAttivi = 0;
+    let maxConcorrenti = 0;
+
+    const tasks = Array.from({ length: 8 }, () => async () => {
+      concorrentiAttivi++;
+      maxConcorrenti = Math.max(maxConcorrenti, concorrentiAttivi);
+      await new Promise(r => setTimeout(r, 5));
+      concorrentiAttivi--;
+      return 'ok';
+    });
+
+    // Invochiamo runWithConcurrency direttamente tramite un modulo che la espone per test.
+    // Poiché runWithConcurrency è privata, la testiamo indirettamente attraverso analizzaQuesito
+    // con max_query_concorrenti=2 e verificando che le call a eseguiRicerca siano raggruppate.
+    // Questo test verifica la logica di conteggio concorrenza con un mock dedicato.
+    let maxSimultanee = 0;
+    let attive = 0;
+    eseguiRicerca.mockImplementation(async () => {
+      attive++;
+      maxSimultanee = Math.max(maxSimultanee, attive);
+      await new Promise(r => setTimeout(r, 10));
+      attive--;
+      return Array.from({ length: 2 }, (_, i) => makeProvvedimento(i + 1));
+    });
+
+    await analizzaQuesito(
+      'Responsabilità medica sanitaria errore paziente danno ospedale negligenza',
+      { max_pagine_serp: 1, max_query_concorrenti: 2, delay_tra_query_ms: 0 }
+    );
+
+    expect(maxSimultanee).toBeLessThanOrEqual(2);
+  });
+
+  it('runWithConcurrency: query fallita non blocca le altre (semantica allSettled)', async () => {
+    let chiamata = 0;
+    eseguiRicerca.mockImplementation(async () => {
+      chiamata++;
+      if (chiamata === 1) throw new Error('Network error simulato');
+      return Array.from({ length: 2 }, (_, i) => makeProvvedimento(i + 1));
+    });
+
+    const result = await analizzaQuesito(
+      'Responsabilità medica sanitaria errore paziente danno',
+      { max_pagine_serp: 1, max_query_concorrenti: 2, delay_tra_query_ms: 0 }
+    );
+
+    expect(result.errori.length).toBeGreaterThan(0);
+    expect(risultatoValido(result)).toBe(true);
   });
 });
 
