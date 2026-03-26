@@ -38,10 +38,14 @@ function buildArchiveUrl(p) {
  */
 export function registerNavigationTools(server) {
   // Tool 6: naviga_archivio
-  server.tool(
+  server.registerTool(
     'naviga_archivio',
-    'Naviga la struttura gerarchica dell\'archivio BDP: Distretto → Ufficio → Materia → Anno → Mese',
-    NavigaArchivioSchema.shape,
+    {
+      title: 'Naviga Archivio BDP',
+      description: 'Naviga la struttura gerarchica dell\'archivio BDP: Distretto → Ufficio → Materia → Anno → Mese',
+      inputSchema: NavigaArchivioSchema,
+      annotations: { readOnlyHint: true, idempotentHint: false },
+    },
     async (args) => {
       const parsed = NavigaArchivioSchema.safeParse(args);
       if (!parsed.success) {
@@ -134,10 +138,14 @@ export function registerNavigationTools(server) {
   );
 
   // Tool 7: ottieni_timeline
-  server.tool(
+  server.registerTool(
     'ottieni_timeline',
-    'Estrae la catena dei gradi di giudizio dalla pagina dettaglio di un provvedimento BDP',
-    UrlSchema.shape,
+    {
+      title: 'Ottieni Timeline Gradi di Giudizio',
+      description: 'Estrae la catena dei gradi di giudizio dalla pagina dettaglio di un provvedimento BDP',
+      inputSchema: UrlSchema,
+      annotations: { readOnlyHint: true, idempotentHint: true },
+    },
     async (args) => {
       const parsed = UrlSchema.safeParse(args);
       if (!parsed.success) {
@@ -189,10 +197,14 @@ export function registerNavigationTools(server) {
   );
 
   // Tool 8: ottieni_precedenti
-  server.tool(
+  server.registerTool(
     'ottieni_precedenti',
-    'Estrae la lista di precedenti conformi e/o difformi dalla pagina dettaglio di un abstract BDP',
-    OttieniPrecedentiSchema.shape,
+    {
+      title: 'Ottieni Precedenti Conformi/Difformi',
+      description: 'Estrae la lista di precedenti conformi e/o difformi dalla pagina dettaglio di un abstract BDP',
+      inputSchema: OttieniPrecedentiSchema,
+      annotations: { readOnlyHint: true, idempotentHint: true },
+    },
     async (args) => {
       const parsed = OttieniPrecedentiSchema.safeParse(args);
       if (!parsed.success) {

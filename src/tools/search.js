@@ -371,10 +371,14 @@ async function eseguiRicerca(target, p, estraiCard) {
  * @param {import('@modelcontextprotocol/sdk/server/mcp.js').McpServer} server
  */
 export function registerSearchTools(server) {
-  server.tool(
+  server.registerTool(
     'cerca_provvedimenti',
-    'Cerca provvedimenti (sentenze, decreti, ordinanze) nella Banca Dati del Merito del Ministero della Giustizia',
-    CercaProvvedimentiSchema.shape,
+    {
+      title: 'Cerca Provvedimenti BDP',
+      description: 'Cerca provvedimenti (sentenze, decreti, ordinanze) nella Banca Dati del Merito del Ministero della Giustizia',
+      inputSchema: CercaProvvedimentiSchema,
+      annotations: { readOnlyHint: true, idempotentHint: false },
+    },
     async (args) => {
       const parsed = CercaProvvedimentiSchema.safeParse(args);
       if (!parsed.success) {
@@ -395,10 +399,14 @@ export function registerSearchTools(server) {
     }
   );
 
-  server.tool(
+  server.registerTool(
     'cerca_abstract',
-    'Cerca abstract/massime redazionali nella Banca Dati del Merito del Ministero della Giustizia',
-    CercaAbstractSchema.shape,
+    {
+      title: 'Cerca Abstract / Massime BDP',
+      description: 'Cerca abstract/massime redazionali nella Banca Dati del Merito del Ministero della Giustizia',
+      inputSchema: CercaAbstractSchema,
+      annotations: { readOnlyHint: true, idempotentHint: false },
+    },
     async (args) => {
       const parsed = CercaAbstractSchema.safeParse(args);
       if (!parsed.success) {

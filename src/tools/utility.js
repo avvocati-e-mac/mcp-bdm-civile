@@ -5,28 +5,28 @@ import { getPage, assertNotRedirectedToLogin } from '../browser/browser-factory.
  */
 export function registerUtilityTools(server) {
   // Tool 9: verifica_sessione
-  server.tool(
+  server.registerTool(
     'verifica_sessione',
-    'Verifica se la sessione CIE è ancora attiva navigando la BDP',
-    {},
+    {
+      title: 'Verifica Sessione CIE',
+      description: 'Verifica se la sessione CIE è ancora attiva navigando la BDP',
+      annotations: { readOnlyHint: true, idempotentHint: false },
+    },
     async () => {
       const page = await getPage();
       try {
         await page.goto('https://bdp.giustizia.it/', { waitUntil: 'networkidle' });
         const sessioneValida =
           !page.url().includes('idserver') && !page.url().includes('pst.giustizia') && !page.url().includes('/login');
+        const result = {
+          valida: sessioneValida,
+          messaggio: sessioneValida
+            ? 'Sessione attiva'
+            : 'Sessione scaduta. Ferma il server (Ctrl+C), esegui: npm run save-session, poi riavvia.',
+        };
         return {
-          content: [
-            {
-              type: 'text',
-              text: JSON.stringify({
-                valida: sessioneValida,
-                messaggio: sessioneValida
-                  ? 'Sessione attiva'
-                  : 'Sessione scaduta. Ferma il server (Ctrl+C), esegui: npm run save-session, poi riavvia.',
-              }),
-            },
-          ],
+          structuredContent: result,
+          content: [{ type: 'text', text: JSON.stringify(result) }],
         };
       } catch (err) {
         return {
@@ -40,10 +40,13 @@ export function registerUtilityTools(server) {
   );
 
   // Tool 10: ottieni_materie
-  server.tool(
+  server.registerTool(
     'ottieni_materie',
-    'Estrae le materie disponibili dal select della ricerca BDP (live, non hardcoded)',
-    {},
+    {
+      title: 'Ottieni Materie Disponibili',
+      description: 'Estrae le materie disponibili dal select della ricerca BDP (live, non hardcoded)',
+      annotations: { readOnlyHint: true, idempotentHint: true },
+    },
     async () => {
       const page = await getPage();
       try {
@@ -56,7 +59,10 @@ export function registerUtilityTools(server) {
             .map((o) => o.textContent.trim())
             .filter(Boolean);
         });
-        return { content: [{ type: 'text', text: JSON.stringify({ materie }) }] };
+        return {
+          structuredContent: { materie },
+          content: [{ type: 'text', text: JSON.stringify({ materie }) }],
+        };
       } catch (err) {
         return {
           isError: true,
@@ -69,10 +75,13 @@ export function registerUtilityTools(server) {
   );
 
   // Tool 11: ottieni_distretti
-  server.tool(
+  server.registerTool(
     'ottieni_distretti',
-    'Estrae i distretti giudiziari disponibili dal select della ricerca BDP (live, non hardcoded)',
-    {},
+    {
+      title: 'Ottieni Distretti Giudiziari',
+      description: 'Estrae i distretti giudiziari disponibili dal select della ricerca BDP (live, non hardcoded)',
+      annotations: { readOnlyHint: true, idempotentHint: true },
+    },
     async () => {
       const page = await getPage();
       try {
@@ -85,7 +94,10 @@ export function registerUtilityTools(server) {
             .map((o) => o.textContent.trim())
             .filter(Boolean);
         });
-        return { content: [{ type: 'text', text: JSON.stringify({ distretti }) }] };
+        return {
+          structuredContent: { distretti },
+          content: [{ type: 'text', text: JSON.stringify({ distretti }) }],
+        };
       } catch (err) {
         return {
           isError: true,

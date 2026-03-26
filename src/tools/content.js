@@ -18,10 +18,14 @@ const LeggiTestoSchema = z.object({
  */
 export function registerContentTools(server) {
   // Tool 3: leggi_dettaglio_provvedimento
-  server.tool(
+  server.registerTool(
     'leggi_dettaglio_provvedimento',
-    'Legge metadati completi, timeline gradi di giudizio e abstract collegati di un provvedimento BDP',
-    UrlSchema.shape,
+    {
+      title: 'Leggi Dettaglio Provvedimento',
+      description: 'Legge metadati completi, timeline gradi di giudizio e abstract collegati di un provvedimento BDP',
+      inputSchema: UrlSchema,
+      annotations: { readOnlyHint: true, idempotentHint: true },
+    },
     async (args) => {
       const parsed = UrlSchema.safeParse(args);
       if (!parsed.success) {
@@ -155,10 +159,14 @@ export function registerContentTools(server) {
   );
 
   // Tool 4: leggi_abstract
-  server.tool(
+  server.registerTool(
     'leggi_abstract',
-    'Legge testo completo di un abstract BDP con precedenti conformi e difformi',
-    UrlSchema.shape,
+    {
+      title: 'Leggi Testo Abstract',
+      description: 'Legge testo completo di un abstract BDP con precedenti conformi e difformi',
+      inputSchema: UrlSchema,
+      annotations: { readOnlyHint: true, idempotentHint: true },
+    },
     async (args) => {
       const parsed = UrlSchema.safeParse(args);
       if (!parsed.success) {
@@ -257,10 +265,14 @@ export function registerContentTools(server) {
   );
 
   // Tool 5: leggi_testo_provvedimento
-  server.tool(
+  server.registerTool(
     'leggi_testo_provvedimento',
-    'Estrae il testo integrale anonimizzato di un provvedimento aprendolo dalla pagina dettaglio e cliccando "Mostra". Il testo completo (tutte le pagine) è nel DOM in .visually-hidden dentro #document-modal.',
-    UrlSchema.shape,
+    {
+      title: 'Leggi Testo Integrale Provvedimento',
+      description: 'Estrae il testo integrale anonimizzato di un provvedimento aprendolo dalla pagina dettaglio e cliccando "Mostra". Il testo completo (tutte le pagine) è nel DOM in .visually-hidden dentro #document-modal.',
+      inputSchema: UrlSchema,
+      annotations: { readOnlyHint: true, idempotentHint: true },
+    },
     async (args) => {
       const parsed = UrlSchema.safeParse(args);
       if (!parsed.success) {
