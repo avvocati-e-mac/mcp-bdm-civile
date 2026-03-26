@@ -1,8 +1,10 @@
-# 🏛️ Banca Dati di Merito per Claude
+# 🏛️ MCP Banca Dati di Merito — Civile
 
-Questo strumento permette a **Claude Desktop** di consultare direttamente la [Banca Dati di Merito](https://bdp.giustizia.it) del Ministero della Giustizia — la banca dati gratuita che raccoglie sentenze, decreti e ordinanze civili dei tribunali italiani.
+Server **MCP (Model Context Protocol)** che permette a qualsiasi LLM o sistema compatibile di consultare direttamente la [Banca Dati di Merito](https://bdp.giustizia.it) del Ministero della Giustizia — la banca dati gratuita che raccoglie sentenze, decreti e ordinanze civili dei tribunali italiani.
 
-Una volta installato, puoi chiedere a Claude cose come:
+Compatibile con **Claude Desktop**, **Cursor**, **Windsurf**, **Continue**, **Zed** e qualsiasi altro client che supporta il protocollo MCP.
+
+Una volta configurato, puoi chiedere al tuo assistente AI:
 
 > *"Cerca sentenze del Tribunale di Bologna sulla locazione abitativa degli ultimi due anni"*
 
@@ -10,14 +12,14 @@ Una volta installato, puoi chiedere a Claude cose come:
 
 > *"Trova abstract sulla responsabilità medica con precedenti conformi"*
 
-Claude cercherà, leggerà e analizzerà i provvedimenti per te, direttamente in chat.
+L'assistente cercherà, leggerà e analizzerà i provvedimenti per te, direttamente in chat.
 
 ---
 
 ## Cosa serve prima di iniziare
 
 1. **Un Mac** (il progetto è testato su macOS)
-2. **Claude Desktop** installato — scaricalo da [claude.ai/download](https://claude.ai/download)
+2. **Un client MCP** installato — es. [Claude Desktop](https://claude.ai/download), [Cursor](https://cursor.sh), [Windsurf](https://codeium.com/windsurf) o altro
 3. **Node.js 20 o superiore** — scaricalo da [nodejs.org](https://nodejs.org) (scegli la versione "LTS")
 4. **La tua CIE** (Carta d'Identità Elettronica) fisica con PIN
 5. **L'app CieID** installata sul tuo smartphone ([App Store](https://apps.apple.com/it/app/cieid/id1504644677) / [Google Play](https://play.google.com/store/apps/details?id=it.ipzs.cieid))
@@ -60,16 +62,16 @@ Si aprirà un browser. Segui questi passi:
 
 1. Clicca **"Accedi"** nella homepage della Banca Dati
 2. Seleziona **"Entra con CIE"**
-3. Apparirà un **QR code** — aprì l'app **CieID** sul telefono e scansionalo
+3. Apparirà un **QR code** — apri l'app **CieID** sul telefono e scansionalo
 4. Avvicina la CIE al telefono (NFC) e inserisci il PIN nell'app
 5. Aspetta che il browser torni sulla homepage della Banca Dati
 6. Torna nel Terminale e premi **Invio**
 
 Se vedi `✅ Sessione verificata`, hai completato il login con successo.
 
-### 4. Configura Claude Desktop
+### 4. Configura il tuo client MCP
 
-Apri il Terminale e incolla questo comando per trovare il percorso corretto del progetto:
+Apri il Terminale e incolla questo comando per trovare il percorso corretto del server:
 
 ```bash
 echo "$(pwd)/src/server.js"
@@ -77,13 +79,7 @@ echo "$(pwd)/src/server.js"
 
 Copia l'output (es. `/Users/tuonome/Documents/mcp-bdm-civile/src/server.js`).
 
-Poi apri il file di configurazione di Claude Desktop:
-
-```bash
-open ~/Library/Application\ Support/Claude/
-```
-
-Apri il file `claude_desktop_config.json` con un editor di testo. Se non esiste, crealo. Il contenuto deve essere:
+Poi aggiungi il server alla configurazione del tuo client. Il blocco da aggiungere è sempre lo stesso:
 
 ```json
 {
@@ -96,19 +92,29 @@ Apri il file `claude_desktop_config.json` con un editor di testo. Se non esiste,
 }
 ```
 
-> ⚠️ Sostituisci `/Users/tuonome/Documents/mcp-bdm-civile/src/server.js` con il percorso copiato prima.
+> ⚠️ Sostituisci il percorso con quello copiato prima.
+
+**Dove si trova il file di configurazione** a seconda del client:
+
+| Client | File di configurazione |
+|--------|------------------------|
+| Claude Desktop | `~/Library/Application Support/Claude/claude_desktop_config.json` |
+| Cursor | `.cursor/mcp.json` nella cartella del progetto, oppure `~/.cursor/mcp.json` globale |
+| Windsurf | `~/.codeium/windsurf/mcp_config.json` |
+| Continue | `.continue/config.json` nella cartella del progetto |
+| Altri | Consulta la documentazione del tuo client per la posizione del file MCP |
 
 Se nel file c'era già altro contenuto (altri server MCP), aggiungi solo la parte `"bdm-civile": { ... }` dentro `"mcpServers"`.
 
-### 5. Riavvia Claude Desktop
+### 5. Riavvia il client
 
-Chiudi e riapri Claude Desktop. Nella chat dovresti vedere un'icona 🔌 in basso che indica che gli strumenti MCP sono attivi.
+Chiudi e riapri il tuo client MCP. Gli strumenti della Banca Dati di Merito saranno disponibili nell'interfaccia.
 
 ---
 
 ## Come si usa
 
-Apri una chat con Claude Desktop e chiedi normalmente, in italiano. Alcuni esempi:
+Chiedi normalmente al tuo assistente AI, in italiano. Alcuni esempi:
 
 **Ricerca provvedimenti:**
 - *"Cerca sentenze sulla locazione commerciale del distretto di Milano"*
@@ -135,7 +141,7 @@ Apri una chat con Claude Desktop e chiedi normalmente, in italiano. Alcuni esemp
 
 ## Quando la sessione scade
 
-La sessione CIE dura circa **un anno**. Quando scade, Claude risponderà con un messaggio del tipo:
+La sessione CIE dura circa **un anno**. Quando scade, l'assistente risponderà con un messaggio del tipo:
 
 > *Sessione CIE scaduta. Ferma il server, esegui: npm run save-session, poi riavvia.*
 
@@ -146,17 +152,17 @@ cd ~/Documents/mcp-bdm-civile
 node src/auth/save-session.js
 ```
 
-Poi riavvia Claude Desktop.
+Poi riavvia il client MCP.
 
 ---
 
 ## Domande frequenti
 
-**Il browser si apre quando uso Claude — è normale?**
-Sì. Lo strumento usa un browser invisibile in background per navigare la BDP. Nella prima chiamata dopo l'avvio di Claude, il browser si inizializza e potresti vederlo comparire brevemente nella Dock.
+**Il browser si apre quando uso il server — è normale?**
+Sì. Il server usa un browser interno in background per navigare la BDP. Alla prima chiamata dopo l'avvio del client, il browser si inizializza e potresti vederlo comparire brevemente nella Dock.
 
 **I miei dati sono al sicuro?**
-Lo strumento accede alla BDP usando le tue credenziali CIE, esattamente come faresti tu nel browser. Non invia nulla a server esterni — tutto rimane sul tuo Mac e sulla BDP del Ministero.
+Il server accede alla BDP usando le tue credenziali CIE, esattamente come faresti tu nel browser. Non invia nulla a server esterni — tutto rimane sul tuo Mac e sulla BDP del Ministero.
 
 **Posso usarlo senza CIE?**
 No. La BDP richiede autenticazione con CIE livello 3. Senza login non è possibile accedere ai provvedimenti.
@@ -164,8 +170,8 @@ No. La BDP richiede autenticazione con CIE livello 3. Senza login non è possibi
 **Funziona su Windows?**
 Il progetto è sviluppato e testato su macOS. Potrebbe funzionare su Windows con adattamenti, ma non è supportato ufficialmente.
 
-**Claude non trova i tool della BDP dopo la configurazione — cosa faccio?**
-Verifica che il percorso nel file `claude_desktop_config.json` sia corretto, poi riavvia completamente Claude Desktop (chiudi dall'icona nella barra dei menu, non solo la finestra).
+**Il client non trova i tool della BDP dopo la configurazione — cosa faccio?**
+Verifica che il percorso nel file di configurazione sia corretto e che il file sia salvato nella posizione giusta per il tuo client. Poi riavvia completamente il client.
 
 ---
 
@@ -179,7 +185,7 @@ mcp-bdm-civile/
 │   │   ├── save-session.js    script di login CIE
 │   │   └── session-manager.js carica la sessione salvata
 │   ├── browser/               gestione del browser interno
-│   └── tools/                 gli 11 strumenti disponibili per Claude
+│   └── tools/                 gli 11 strumenti disponibili
 ├── spec/                      documentazione tecnica dei selettori DOM
 ├── sessioni/                  diario delle sessioni di sviluppo
 ├── CLAUDE.md                  istruzioni tecniche per lo sviluppo
