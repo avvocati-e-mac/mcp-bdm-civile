@@ -36,6 +36,8 @@ src/server.js          ← entry point MCP
 
 Il server comunica con Claude Desktop tramite **stdio** usando il protocollo MCP (JSON-RPC 2.0). Ogni messaggio di log usa `console.error()` — `console.log()` su stdout corromperebbe il canale di comunicazione.
 
+**SDK:** `@modelcontextprotocol/sdk ^1.10.0` (testato con 1.28.0). I tool usano `server.registerTool(name, { title, description, inputSchema, outputSchema, annotations }, callback)` — `server.tool()` è deprecato dalla 1.10.
+
 ---
 
 ## Autenticazione CIE
@@ -134,7 +136,7 @@ Dato l'URL di un abstract (`/abstract/page?id=...`), legge:
 - Metadati: tipo provvedimento, area, estremi, ufficio, materia, parole chiave
 - Conteggio precedenti conformi e difformi
 
-> **Nota:** l'URL navigabile direttamente è solo quello con `id=` (es. `/abstract/page?id=abc123`). Gli URL con `from=` generati dalla ricerca non sono navigabili direttamente.
+> **Nota:** sia gli URL con `id=` (es. `/abstract/page?id=abc123`) che quelli con `from=` generati dalla ricerca (es. `/abstract/page?from=0&size=1&...`) sono navigabili direttamente — entrambi funzionano come input per `leggi_abstract`.
 
 #### `leggi_testo_provvedimento`
 Dato l'URL di un provvedimento, clicca il bottone "Mostra" per aprire il viewer PDF inline, poi estrae il testo integrale anonimizzato dal modal `#document-modal`. Tutto il testo (tutte le pagine) è in un singolo `div.visually-hidden`.
@@ -271,13 +273,15 @@ npx playwright install chromium
 # Login CIE (solo quando la sessione scade)
 node src/auth/save-session.js
 
-# Test manuale di un tool
+# Test manuale di un tool (pattern aggiornato SDK 1.28+)
 node -e "
-import('./src/tools/search.js').then(async () => {
-  const { getPage, assertNotRedirectedToLogin } = await import('./src/browser/browser-factory.js');
-  // ... test qui
-  process.exit(0);
-});
+const { McpServer } = await import('@modelcontextprotocol/sdk/server/mcp.js');
+const { registerSearchTools } = await import('./src/tools/search.js');
+const server = new McpServer({ name: 'test', version: '1.0.0' });
+registerSearchTools(server);
+const t = server._registeredTools;
+const r = await t.cerca_provvedimenti.handler({ query: 'locazione', max_results: 2 }, {});
+console.error(r.content[0].text);
 "
 
 # Avvio server diretto (debug)
@@ -295,3 +299,4 @@ node src/server.js
 | BDP blocca le richieste | Troppe chiamate veloci | Il rate limit è già incorporato; non fare loop rapidi |
 | `console.log` nel codice | Corrompe il canale stdio MCP | Usare sempre `console.error()` |
 | Browser headless bloccato | Il sito rileva Playwright | `headless: false` è obbligatorio |
+| `save-session.js` non salva | CWD diversa dalla root | Eseguire sempre dalla root del progetto: `cd /percorso/mcp-bdp-merito && node src/auth/save-session.js` |
