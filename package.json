@@ -8,7 +8,7 @@
     "save-session": "node src/auth/save-session.js"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "latest",
+    "@modelcontextprotocol/sdk": "^1.10.0",
     "playwright": "latest",
     "zod": "latest"
   }
