@@ -5,6 +5,7 @@ import { registerContentTools } from './tools/content.js';
 import { registerNavigationTools } from './tools/navigation.js';
 import { registerUtilityTools } from './tools/utility.js';
 import { closeSharedContext } from './browser/browser-singleton.js';
+import { registerWorkflowTools } from './tools/workflow.js';
 
 // CRITICO: stdio transport — console.log su stdout corrompe il protocollo MCP.
 // USA SEMPRE console.error() per il logging in questo progetto.
@@ -19,6 +20,7 @@ registerSearchTools(server);
 registerContentTools(server);
 registerNavigationTools(server);
 registerUtilityTools(server);
+registerWorkflowTools(server);
 
 const transport = new StdioServerTransport();
 await server.connect(transport);
