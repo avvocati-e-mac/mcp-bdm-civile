@@ -224,8 +224,11 @@ async function estraiCardProvvedimento(page, baseUrl) {
       // Estratti di testo (snippet con <mark>)
       const estratti = Array.from(body.querySelectorAll('.estratto li')).map(li => li.textContent?.trim() ?? '').filter(Boolean);
 
-      // L'URL dettaglio non è in href — va costruito cliccando (SPA).
-      // Usiamo l'indice della card per identificarla: il chiamante usa navigazione.
+      // Prova a estrarre l'id dall'attributo data-* o onclick del button
+      const idMatch = titleBtn?.getAttribute('onclick')?.match(/id=([^&'"]+)/) ??
+                      titleBtn?.getAttribute('data-id')?.match(/(.+)/);
+      const link_dettaglio = null; // sarà popolato dopo il click
+
       return {
         tipo_provvedimento,
         area,
@@ -237,7 +240,7 @@ async function estraiCardProvvedimento(page, baseUrl) {
         riferimenti_normativi,
         n_abstract_collegati,
         estratti,
-        // link_dettaglio non disponibile inline — usa naviga_a_risultato(index)
+        link_dettaglio,
       };
     }).filter(Boolean);
   }, baseUrl);
@@ -344,7 +347,29 @@ async function eseguiRicerca(target, p, estraiCard) {
       const pagina = await estraiCard(page, BASE_URL);
       if (pagina.length === 0) break;
 
-      results.push(...pagina);
+      // Per ogni card estratta, clicca il titolo per catturare l'URL del dettaglio
+      for (let i = 0; i < pagina.length && results.length < p.max_results; i++) {
+        const card = pagina[i];
+        const titleBtns = page.locator('.card.card-bg .btn-link.text-break');
+        const btn = titleBtns.nth(i);
+        if (await btn.count() > 0) {
+          await btn.click();
+          try {
+            await page.waitForURL(/\/provvedimento\/page|\/abstract\/page/, { timeout: 10000 });
+            card.link_dettaglio = page.url();
+          } catch {
+            card.link_dettaglio = null;
+          }
+          // Torna alla pagina dei risultati
+          await page.goBack({ waitUntil: 'networkidle' });
+          try {
+            await page.waitForSelector('.card.card-bg .btn-link.text-break', { timeout: 15000 });
+          } catch { /* ignora */ }
+          await rateLimit(page);
+        }
+        results.push(card);
+      }
+
       if (results.length >= p.max_results) break;
 
       // Paginatore verificato live: button[aria-label="Pagina successiva"] con testo "Successiva"

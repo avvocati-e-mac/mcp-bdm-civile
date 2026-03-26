@@ -106,3 +106,58 @@ Abstract:      https://bdp.giustizia.it/abstract/page?from=0&size=1&area=CIVILE&
 
 ## Stato finale branch
 Tutti e 6 gli step completati e committati. Branch `mcp-2025-upgrade` pronto per merge su `main`.
+
+---
+
+## Test use-case reale — Sentenza Tribunale di Salerno n. 3773/2024
+
+### Ricerca eseguita
+Tentato recupero e riassunto della sentenza:
+`TRIBUNALE DI SALERNO N. 3773/2024 - N. R.G. 00001611/2020 DEPOSITO MINUTA 15/07/2024`
+
+### Esito `cerca_provvedimenti`
+Tool ha trovato il provvedimento correttamente:
+```json
+{
+  "tipo_provvedimento": "SENTENZA",
+  "area": "CIVILE",
+  "estremi": "TRIBUNALE DI SALERNO N. 3773/2024 - N. R.G. 00001611/2020 DEPOSITO MINUTA 15/07/2024 PUBBLICAZIONE 15/07/2024",
+  "ufficio": "TRIBUNALE DI SALERNO",
+  "ruolo": "GENERALE DEGLI AFFARI CIVILI CONTENZIOSI",
+  "materia": "ALTRI ISTITUTI E LEGGI SPECIALI IN GENERE",
+  "parole_chiave": ["ALTRI ISTITUTI E LEGGI SPECIALI"]
+}
+```
+
+### Bug identificato: `link_dettaglio` mancante
+`cerca_provvedimenti` non restituisce l'URL del dettaglio perché il sito BDP usa una SPA:
+i titoli delle card sono `<button>` (non `<a href>`), quindi l'URL non è estraibile staticamente.
+
+`leggi_testo_provvedimento` e `leggi_dettaglio_provvedimento` richiedono un URL diretto,
+ma senza `link_dettaglio` non c'è modo di passarlo.
+
+### Fix applicato a `search.js`
+Modificata `eseguiRicerca` per, dopo ogni estrazione card, cliccare il titolo e catturare l'URL SPA:
+```js
+await btn.click();
+await page.waitForURL(/\/provvedimento\/page|\/abstract\/page/, { timeout: 10000 });
+card.link_dettaglio = page.url();
+await page.goBack({ waitUntil: 'networkidle' });
+```
+Il campo `link_dettaglio` viene ora popolato su ogni card risultato.
+
+### Problema aperto: riavvio server MCP necessario
+Le modifiche a `search.js` richiedono il riavvio del server MCP (processo gestito da Claude Desktop).
+Senza riavvio, il codice vecchio continua a girare e `link_dettaglio` rimane `null`.
+
+Soluzione alternativa tentata: navigazione via `naviga_archivio` → SALERNO → TRIBUNALE DI SALERNO
+→ ALTRI ISTITUTI E LEGGI SPECIALI IN GENERE → 2024 → LUGLIO → 42 provvedimenti.
+`leggi_testo_provvedimento` sull'URL archivio ha fallito per strict mode violation
+(10 bottoni "Mostra" in pagina, il tool usa `.click()` senza `.first()`).
+
+### Prossimi passi
+1. Riavviare il server MCP da Claude Desktop
+2. Rieseguire `cerca_provvedimenti` → ottenere `link_dettaglio`
+3. Passarlo a `leggi_testo_provvedimento` per estrarre e riassumere il testo integrale
+4. In alternativa: modificare `content.js` per usare `.first()` su "Mostra" quando la pagina
+   è un archivio con più provvedimenti (attualmente strict mode lancia errore)
