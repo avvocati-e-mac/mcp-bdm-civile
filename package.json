@@ -5,11 +5,16 @@
   "scripts": {
     "start": "node src/server.js",
     "inspector": "npx @modelcontextprotocol/inspector node src/server.js",
-    "save-session": "node src/auth/save-session.js"
+    "save-session": "node src/auth/save-session.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.10.0",
     "playwright": "latest",
     "zod": "latest"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.1"
   }
 }
