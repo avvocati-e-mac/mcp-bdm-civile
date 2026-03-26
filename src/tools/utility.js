@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { getPage, assertNotRedirectedToLogin } from '../browser/browser-factory.js';
 
 /**
@@ -10,6 +11,10 @@ export function registerUtilityTools(server) {
     {
       title: 'Verifica Sessione CIE',
       description: 'Verifica se la sessione CIE è ancora attiva navigando la BDP',
+      outputSchema: z.object({
+        valida: z.boolean(),
+        messaggio: z.string(),
+      }),
       annotations: { readOnlyHint: true, idempotentHint: false },
     },
     async () => {
@@ -45,6 +50,9 @@ export function registerUtilityTools(server) {
     {
       title: 'Ottieni Materie Disponibili',
       description: 'Estrae le materie disponibili dal select della ricerca BDP (live, non hardcoded)',
+      outputSchema: z.object({
+        materie: z.array(z.string()),
+      }),
       annotations: { readOnlyHint: true, idempotentHint: true },
     },
     async () => {
@@ -80,6 +88,9 @@ export function registerUtilityTools(server) {
     {
       title: 'Ottieni Distretti Giudiziari',
       description: 'Estrae i distretti giudiziari disponibili dal select della ricerca BDP (live, non hardcoded)',
+      outputSchema: z.object({
+        distretti: z.array(z.string()),
+      }),
       annotations: { readOnlyHint: true, idempotentHint: true },
     },
     async () => {
